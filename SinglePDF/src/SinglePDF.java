@@ -238,12 +238,26 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 			int[] idcs = mlist.getSelectedIndices();
 			if (idcs.length == 1) {
 				pgs = (PDFPages)mlist.getSelectedValue();
+				PDFPages pgstoexport = null;
+				try {
+					pgstoexport = new PDFPages(0, pgs.getFile(), pgs.getStart(), pgs.getEnd());
+				} catch (IOException e) {					
+					e.printStackTrace();
+				}
 				indexOfExported = idcs;
-				return new DataHandler(pgs, pdfpagesFlavor.getMimeType());
+				return new DataHandler(pgstoexport, pdfpagesFlavor.getMimeType());
 			} else {
-				pglist = new PDFPages[idcs.length];	
+				pglist = new PDFPages[idcs.length];
+				PDFPages temppages;
 				for (int i = 0; i < idcs.length; i++) {
-					pglist[i] = (PDFPages)mlist.getModel().getElementAt(idcs[i]);
+					temppages = (PDFPages)mlist.getModel().getElementAt(idcs[i]);
+					try {
+						pglist[i] = new PDFPages(0,temppages.getFile(),temppages.getStart(),temppages.getEnd());
+					} catch (IOException e) {
+						pglist[i] = null;
+						e.printStackTrace();
+					}
+//					pglist[i] = (PDFPages)mlist.getModel().getElementAt(idcs[i]);
 				}
 				indexOfExported = idcs;
 				return new DataHandler(pglist, pdfpagelistFlavor.getMimeType());
