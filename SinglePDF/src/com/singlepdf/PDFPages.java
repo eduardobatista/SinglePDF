@@ -1,3 +1,4 @@
+package com.singlepdf;
 import java.io.File;
 import java.io.IOException;
 
@@ -71,7 +72,7 @@ public class PDFPages {
 		if ( (range[0] == -1) || (range[1] == -1) ) {
 			return pdfFile.getName();
 		} else {
-			return "<html>" + pdfFile.getName() + "<br>Pages " + Integer.toString(range[0]) + " to " + Integer.toString(range[1]) + " of " + Integer.toString(numpages) +  "</html>";
+			return "<html><b>" + pdfFile.getName() + "</b><br>Pages " + Integer.toString(range[0]) + " to " + Integer.toString(range[1]) + " of " + Integer.toString(numpages) +  "</html>";
 		}
 		
 	}

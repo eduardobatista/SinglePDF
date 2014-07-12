@@ -1,3 +1,5 @@
+package com.singlepdf;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -23,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 import javax.activation.ActivationDataFlavor;
 import javax.activation.DataHandler;
@@ -32,6 +35,7 @@ import javax.swing.DropMode;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
@@ -59,6 +63,9 @@ import com.jeta.forms.components.panel.FormPanel;
 
 public class SinglePDF implements ListSelectionListener, ItemListener, ActionListener {
 	
+	private static final String LAST_DIR = "last_dir";
+	private static final String LAST_DIR_PGLIST = "last_dir_pglist";
+	
 	private JFrame frame;
 	private FormPanel mainFormPanel;
 	private JList mainList;
@@ -72,6 +79,8 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 	private JButton bDown;
 	private JButton bSplit;
 	private JButton bBuild;
+	private JButton bSinglePages;
+	private JCheckBox checkNoCopyPaste;
 	
 	private JLabel statusbar;
 	
@@ -79,23 +88,24 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 	
 	ArrayList<PDFPages> pagesList = new ArrayList<PDFPages>();
 	
-	private ImageIcon smallPdfIcon = new ImageIcon(getClass().getResource("pdficonsmall.png"));;
+	private ImageIcon smallPdfIcon = new ImageIcon(getClass().getResource("/pdficonsmall.png"));;
 	
 	public SinglePDF() {
 		
 		try { UIManager.setLookAndFeel("com.jgoodies.looks.plastic.PlasticXPLookAndFeel"); } 
 		catch (Exception e) { e.printStackTrace(); }		
-		frame = new JFrame("SinglePDF 0.2b");
+		frame = new JFrame("SinglePDF 0.21b");
 				
 		mainFormPanel = new FormPanel("mainwindow.jfrm");	
-		mainList = mainFormPanel.getList("mainList");
-		mainList.setCellRenderer(new PagesListCellRenderer());
+		mainList = mainFormPanel.getList("mainList");		
 		mainList.setDragEnabled(true);
 		mainList.setDropMode(DropMode.INSERT);		
 		mainList.setTransferHandler(thandler);
 		mainList.setSelectionBackground(Color.white);
 		mainList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 		mainList.addListSelectionListener(this);
+		mainList.setLayoutOrientation(JList.HORIZONTAL_WRAP);
+		mainList.setVisibleRowCount(-1);
 		
 		comboStart = mainFormPanel.getComboBox("comboStart");		
 		comboEnd = mainFormPanel.getComboBox("comboEnd");
@@ -118,6 +128,10 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		bSplit.addActionListener(this);
 		bBuild = (JButton)mainFormPanel.getButton("bBuild");
 		bBuild.addActionListener(this);
+		bSinglePages = (JButton)mainFormPanel.getButton("bSinglePages");
+		bSinglePages.addActionListener(this);
+		
+		checkNoCopyPaste = mainFormPanel.getCheckBox("checkNoCopyPaste");
 		
 		statusbar = mainFormPanel.getLabel("statusBar");
 		
@@ -127,7 +141,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 		frame.getContentPane().setLayout(new BorderLayout());
 		frame.getContentPane().add(mainFormPanel, BorderLayout.CENTER);
-		frame.setIconImage(new ImageIcon(getClass().getResource("pdfmultiicon.png")).getImage());
+		frame.setIconImage(new ImageIcon(getClass().getResource("/pdfmultiicon.png")).getImage());
 		frame.pack();		
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		int width = 700;
@@ -137,6 +151,8 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
+		mainList.setCellRenderer(new PagesListCellRenderer(bBuild.getFont()));
+						
 	}
 	
 	JMenuItem menuOpen;
@@ -372,14 +388,40 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		new SinglePDF();
+		new SinglePDF();		
+	}
+	
+	private static final int OUTPUTDIR = 0;
+	private static final int PGLISTDIR = 1;
+	
+	private File getLastDir(int type) {
+		Preferences prefs = Preferences.userNodeForPackage(this.getClass());
+		if (type == OUTPUTDIR) {
+			return new File(prefs.get(LAST_DIR,""));
+		} else {
+			return new File(prefs.get(LAST_DIR_PGLIST,""));
+		}		
+	}
+	
+	private void saveLastDir(File dir, int type) {
+		try {
+			Preferences prefs = Preferences.userNodeForPackage(this.getClass());
+			if (type == OUTPUTDIR) {
+				prefs.put(LAST_DIR,dir.getCanonicalPath());
+			} else {
+				prefs.put(LAST_DIR_PGLIST,dir.getCanonicalPath());
+			}
+			
+		} catch (IOException e) {			
+			e.printStackTrace();
+		}	
 	}
 	
 	public void openListFile() throws FileNotFoundException, IOException {
 		
 		// TODO: Check if list is saved
 		
-		final JFileChooser fc = new JFileChooser();
+		final JFileChooser fc = new JFileChooser(getLastDir(PGLISTDIR));
 //		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
 		
 		File input = new File("input.pglist");
@@ -446,6 +488,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 				}
 				
 				in.close();
+				saveLastDir(basedir,PGLISTDIR);
 								
 			}		
 		}
@@ -463,7 +506,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 		File output = new File("output.pglst");
 				
-		final JFileChooser fc = new JFileChooser();
+		final JFileChooser fc = new JFileChooser(this.getLastDir(PGLISTDIR));
 //		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
 		
 		FileFilter filter = new FileFilter() {			
@@ -524,6 +567,8 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 		out.close();
 		
+		saveLastDir(basedir,PGLISTDIR);
+		
 	}
 	
 	public void generateOutputFile() throws IOException, DocumentException {
@@ -536,7 +581,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 		File output = new File("output.pdf");
 				
-		final JFileChooser fc = new JFileChooser();
+		final JFileChooser fc = new JFileChooser(getLastDir(OUTPUTDIR));
 		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
 		
 		FileFilter filter = new FileFilter() {			
@@ -591,7 +636,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 				} else {
 					output.delete();
 					output.createNewFile();
-				}
+				}				
 			} else {
 				output.createNewFile();
 			}		
@@ -599,6 +644,9 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 				
 		Document document = new Document();
 		PdfCopy copy = new PdfCopy(document, new FileOutputStream(output));
+		if (checkNoCopyPaste.isSelected()) {
+			copy.setEncryption(new byte[]{0x30}, new byte[]{}, 0, PdfCopy.AllowCopy);
+		}		
 		document.open();
 		
 		PdfReader reader;
@@ -616,6 +664,8 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		document.close();
 		
 		setStatus("The file " + output.getName() + " was successfully generated.");
+		
+		saveLastDir(output.getParentFile(),OUTPUTDIR);
 		
 	}
 
@@ -702,6 +752,25 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 			mainList.setSelectedIndices(idcs);
 		}		
 	}
+	
+	private void turnSelectionIntoSinglePages() throws IOException {		
+		int[] idcs = mainList.getSelectedIndices();
+		DefaultListModel model = ((DefaultListModel)mainList.getModel());
+		if (idcs.length == 0) { return; }
+		else {			
+			for (int i = 0; i < idcs.length; i++) {
+				PDFPages item = (PDFPages)model.get(idcs[i]);
+				item.setRange(1,1);
+				int addedpages = 0;
+				for (int j = 2; j <= item.getNumPages(); j++) {
+					model.insertElementAt(new PDFPages(counter++, new File(item.getFile().getCanonicalPath()), j, j), idcs[i]+j-1);
+					addedpages++;
+				}
+				for (int j = i+1; j < idcs.length; j++) { idcs[j] = idcs[j] + addedpages; }				
+			}
+			mainList.setSelectedIndices(idcs);
+		}
+	}
 
 	public void actionPerformed(ActionEvent e) {
 		
@@ -738,8 +807,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 				
 			} else if (e.getSource() == bSplit) {
 				
-				int idx = mainList.getSelectedIndex();
-				DefaultListModel model = ((DefaultListModel)mainList.getModel());			
+				int idx = mainList.getSelectedIndex();		
 				if (idx >= 0) { 
 					PDFPages item = (PDFPages)mainList.getSelectedValue();
 					if (item.getNumPages() > 1) {
@@ -747,6 +815,20 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 					}
 				}
 				
+			} else if (e.getSource() == bSinglePages) {
+				
+				int idx = mainList.getSelectedIndex();
+				if (idx >= 0) { 
+					PDFPages item = (PDFPages)mainList.getSelectedValue();
+					if (item.getNumPages() > 1) {
+						try {
+							this.turnSelectionIntoSinglePages();
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}					
+					}
+				}
+								
 			} else if (e.getSource() == bBuild) {
 				
 				try {
