@@ -381,8 +381,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 			statusbar.setText(" " + msg);
 		}
 	}
-	
-	
+		
 	/**
 	 * @param args
 	 */
