@@ -57,7 +57,13 @@ import javax.swing.filechooser.FileView;
 
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.PageSize;
+import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfCopy;
+import com.itextpdf.text.pdf.PdfDictionary;
+import com.itextpdf.text.pdf.PdfImportedPage;
+import com.itextpdf.text.pdf.PdfName;
+import com.itextpdf.text.pdf.PdfNumber;
 import com.itextpdf.text.pdf.PdfReader;
 import com.jeta.forms.components.panel.FormPanel;
 
@@ -72,12 +78,13 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 	
 	private JComboBox comboStart;
 	private JComboBox comboEnd;
+	private JComboBox comboResize;
+	private JComboBox comboGrouping;
 	
 	private JButton bRemove;
 	private JButton bDuplicate;
 	private JButton bUp;
 	private JButton bDown;
-	private JButton bSplit;
 	private JButton bBuild;
 	private JButton bSinglePages;
 	private JCheckBox checkNoCopyPaste;
@@ -115,6 +122,12 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		}
 		comboStart.addItemListener(this);
 		comboEnd.addItemListener(this);
+		comboResize = mainFormPanel.getComboBox("comboResize");
+		String[] resizeitens = new String[]{"None","A4","Letter"};
+		for (int i = 0; i < resizeitens.length; i++) { comboResize.addItem(resizeitens[i]); }		
+		comboGrouping = mainFormPanel.getComboBox("comboGrouping");
+		String[] groupingItens = new String[]{"1","2-Landscape","4-Portrait"};
+		for (int i = 0; i < groupingItens.length; i++) { comboGrouping.addItem(groupingItens[i]); }	
 		
 		bRemove = (JButton)mainFormPanel.getButton("bRemove");
 		bRemove.addActionListener(this);
@@ -124,8 +137,6 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		bUp.addActionListener(this);
 		bDown = (JButton)mainFormPanel.getButton("bDown");
 		bDown.addActionListener(this);
-		bSplit = (JButton)mainFormPanel.getButton("bSplit");
-		bSplit.addActionListener(this);
 		bBuild = (JButton)mainFormPanel.getButton("bBuild");
 		bBuild.addActionListener(this);
 		bSinglePages = (JButton)mainFormPanel.getButton("bSinglePages");
@@ -570,6 +581,9 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 	}
 	
+	private final static int[] SIZEofA4 = {595,842};
+	private final static int[] SIZEofLETTER = {595,842};
+	
 	public void generateOutputFile() throws IOException, DocumentException {
 		
 		DefaultListModel model = (DefaultListModel)mainList.getModel();
@@ -640,10 +654,16 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 				output.createNewFile();
 			}		
 		}
+		
+		int pageresize = comboResize.getSelectedIndex();
 				
-		Document document = new Document();
+		Document document;
+		if (pageresize == 1) { document = new Document(PageSize.A4); }
+		else if (pageresize == 2) { document = new Document(PageSize.LETTER); }
+		else { document = new Document(); }
 		PdfCopy copy = new PdfCopy(document, new FileOutputStream(output));
-		if (checkNoCopyPaste.isSelected()) {
+		
+		if (checkNoCopyPaste.isSelected()) {			
 			copy.setEncryption(new byte[]{0x30}, new byte[]{}, 0, PdfCopy.AllowCopy);
 		}		
 		document.open();
@@ -652,10 +672,23 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		PDFPages pages;
 		
 		for (int i = 0; i < model.size(); i++) {
+			
 			pages = (PDFPages)model.get(i);
 			reader = new PdfReader(pages.getAbsolutePath());
-			for (int j = pages.getStart(); j <= pages.getEnd(); j++) {
-				copy.addPage(copy.getImportedPage(reader,j));				
+			
+			for (int j = pages.getStart(); j <= pages.getEnd(); j++) {				
+				PdfImportedPage pg;
+				if (pageresize == 0) { pg = copy.getImportedPage(reader,j); }
+				else {
+					Rectangle rect = reader.getPageSizeWithRotation(j);					
+//					System.out.println(pages.getFileName() + " " + rect.getWidth() + " . " + rect.getHeight() );
+					if (rect.getWidth() > rect.getHeight()) {
+						reader.getPageN(j).put(PdfName.ROTATE, new PdfNumber(reader.getPageRotation(j)+90));						
+					}
+				}
+				pg = copy.getImportedPage(reader,j);			
+				
+				copy.addPage(pg);								
 			}
 			copy.freeReader(reader);
 			reader.close();
@@ -676,7 +709,6 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 			populating = true;
 			comboStart.setEnabled(true);
 			comboEnd.setEnabled(true);
-			bSplit.setEnabled(true);
 			comboStart.removeAllItems();
 			comboEnd.removeAllItems();
 			for (int i = 1; i <= pages.getNumPages(); i++) {
@@ -689,7 +721,6 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		} else if (idcs.length > 1) {
 			comboStart.setEnabled(false);
 			comboEnd.setEnabled(false);
-			bSplit.setEnabled(false);
 		}		
 	}
 	
@@ -803,16 +834,6 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 			} else if (e.getSource() == bDown) {
 				
 				this.moveItensDown();
-				
-			} else if (e.getSource() == bSplit) {
-				
-				int idx = mainList.getSelectedIndex();		
-				if (idx >= 0) { 
-					PDFPages item = (PDFPages)mainList.getSelectedValue();
-					if (item.getNumPages() > 1) {
-						// TODO: Fazer Split!!!					
-					}
-				}
 				
 			} else if (e.getSource() == bSinglePages) {
 				
