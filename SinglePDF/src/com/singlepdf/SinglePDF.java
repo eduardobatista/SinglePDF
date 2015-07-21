@@ -59,12 +59,14 @@ import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.PageSize;
 import com.itextpdf.text.Rectangle;
+import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfCopy;
 import com.itextpdf.text.pdf.PdfDictionary;
 import com.itextpdf.text.pdf.PdfImportedPage;
 import com.itextpdf.text.pdf.PdfName;
 import com.itextpdf.text.pdf.PdfNumber;
 import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.PdfWriter;
 import com.jeta.forms.components.panel.FormPanel;
 
 public class SinglePDF implements ListSelectionListener, ItemListener, ActionListener {
@@ -101,7 +103,7 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 		try { UIManager.setLookAndFeel("com.jgoodies.looks.plastic.PlasticXPLookAndFeel"); } 
 		catch (Exception e) { e.printStackTrace(); }		
-		frame = new JFrame("SinglePDF 0.21b");
+		frame = new JFrame("SinglePDF 0.22b");
 				
 		mainFormPanel = new FormPanel("mainwindow.jfrm");	
 		mainList = mainFormPanel.getList("mainList");		
@@ -581,8 +583,8 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		
 	}
 	
-	private final static int[] SIZEofA4 = {595,842};
-	private final static int[] SIZEofLETTER = {595,842};
+	private final static float[] SIZEofA4 = {595,842};
+	private final static float[] SIZEofLETTER = {595,842};
 	
 	public void generateOutputFile() throws IOException, DocumentException {
 		
@@ -661,16 +663,50 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 		if (pageresize == 1) { document = new Document(PageSize.A4); }
 		else if (pageresize == 2) { document = new Document(PageSize.LETTER); }
 		else { document = new Document(); }
-		PdfCopy copy = new PdfCopy(document, new FileOutputStream(output));
 		
-		if (checkNoCopyPaste.isSelected()) {			
-			copy.setEncryption(new byte[]{0x30}, new byte[]{}, 0, PdfCopy.AllowCopy);
-		}		
-		document.open();
-		
+//		if (checkNoCopyPaste.isSelected()) {			
+//			copy.setEncryption(new byte[]{0x30}, new byte[]{}, 0, PdfCopy.AllowCopy);
+//		}		
+				
 		PdfReader reader;
 		PDFPages pages;
 		
+//		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(output));		
+//		document.open();
+//		PdfContentByte cb = writer.getDirectContent();	
+//		for (int i = 0; i < model.size(); i++) {
+//			
+//			pages = (PDFPages)model.get(i);
+//			reader = new PdfReader(pages.getAbsolutePath());
+//						
+//			for (int j = pages.getStart(); j <= pages.getEnd(); j++) {				
+//				PdfImportedPage pg;
+//				document.newPage();
+//				float scaleW = 1f;
+//				float scaleH = 1f;
+//				if (pageresize == -1) { 
+//					//pg = copy.getImportedPage(reader,j); 
+//				} else {
+//					Rectangle rect = reader.getPageSizeWithRotation(j);					
+//					//System.out.println(pages.getFileName() + " " + rect.getWidth() + " . " + rect.getHeight() );
+//					if (rect.getWidth() > rect.getHeight()) {
+//						reader.getPageN(j).put(PdfName.ROTATE, new PdfNumber(reader.getPageRotation(j)+90));						
+//					}				
+//					scaleW = SIZEofA4[0]/rect.getWidth();
+//					scaleH = SIZEofA4[1]/rect.getHeight();
+//					if (scaleW < scaleH) { scaleH = scaleW; }
+//					else { scaleW = scaleH; }
+//				}
+//				pg = writer.getImportedPage(reader, j);
+//				cb.addTemplate(pg, scaleW, 0, 0, scaleH, 0, 0);							
+//			}
+//			writer.freeReader(reader);
+//			reader.close();		
+//		}
+//		document.close();
+		
+		PdfCopy copy = new PdfCopy(document, new FileOutputStream(output));		
+		document.open();		
 		for (int i = 0; i < model.size(); i++) {
 			
 			pages = (PDFPages)model.get(i);
@@ -681,15 +717,14 @@ public class SinglePDF implements ListSelectionListener, ItemListener, ActionLis
 				if (pageresize == 0) { pg = copy.getImportedPage(reader,j); }
 				else {
 					Rectangle rect = reader.getPageSizeWithRotation(j);					
-//					System.out.println(pages.getFileName() + " " + rect.getWidth() + " . " + rect.getHeight() );
+					//System.out.println(pages.getFileName() + " " + rect.getWidth() + " . " + rect.getHeight() );
 					if (rect.getWidth() > rect.getHeight()) {
 						reader.getPageN(j).put(PdfName.ROTATE, new PdfNumber(reader.getPageRotation(j)+90));						
 					}
-				}
-				pg = copy.getImportedPage(reader,j);			
-				
-				copy.addPage(pg);								
-			}
+					pg = copy.getImportedPage(reader,j);	
+				}	
+				copy.addPage(pg);
+			}			
 			copy.freeReader(reader);
 			reader.close();
 		}

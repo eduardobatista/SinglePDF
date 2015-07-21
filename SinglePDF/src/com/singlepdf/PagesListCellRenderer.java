@@ -65,6 +65,7 @@ public class PagesListCellRenderer extends JLabel implements ListCellRenderer {
 	
 	private static final int titleinset = 12;
 	
+	String[] lines = new String[6];
 	public void paintComponent(Graphics g)
     {
         //super.paintComponent(g);		
@@ -101,12 +102,66 @@ public class PagesListCellRenderer extends JLabel implements ListCellRenderer {
 		if (r2.getWidth() < maxsize) {
 			g2.drawString(filename, 65-(int)(r2.getWidth()/2), 85);
 		} else {
-			int ct = (filename.length() < 20) ? filename.length() : 20;
-			do {
-				ct--;				
-				r2 = fm.getStringBounds(filename.substring(0,ct) + "...",g2);
-			} while (r2.getWidth() > maxsize);
-			g2.drawString(filename.substring(0,ct) + "...", 65-(int)(r2.getWidth()/2), 85);
+			int ctlines = 0;
+			int ct = 0;
+			int ct2 = 0;						
+			boolean flagend = false;
+			while(!flagend) {			
+				do {
+					ct2++;
+					if (ct2 > filename.length()) {						
+						flagend = true;
+						break;
+					}					
+					r2 = fm.getStringBounds(filename.substring(ct,ct2),g2);
+				} while (r2.getWidth() < maxsize);
+				ct2--;
+				lines[ctlines] = filename.substring(ct,ct2);
+				ctlines++;
+				ct = ct2;
+			}
+			int lineheight = fm.getHeight();
+			for (int i = 0; i < ctlines; i++) {
+				r2 = fm.getStringBounds(lines[i],g2);
+				g2.drawString(lines[i], titleinset,85-((ctlines*lineheight)/2)+lineheight/2+(i*lineheight));
+				//System.out.println((85-(ctlines*lineheight)/2)+i*lineheight + " ");
+				//g2.drawString(filename.substring(0,ct) + "...", 65-(int)(r2.getWidth()/2), 85-(int)(fm.getHeight()/2));
+			}
+			
+			//r2 = fm.getStringBounds(lines[ctlines-1],g2);
+			//g2.drawString(lines[ctlines-1], 130-titleinset-(int)(r2.getWidth()),85+(ctlines*lineheight)/2+(ctlines-1)*lineheight);
+			
+//			int ct = (filename.length() < 20) ? filename.length() : 20;
+//			do {
+//				ct--;				
+//				r2 = fm.getStringBounds(filename.substring(0,ct),g2);
+//			} while (r2.getWidth() > maxsize);
+//			lines[0] = filename.substring(0,ct);
+//			ctlines++;
+//			
+//			//g2.drawString(filename.substring(0,ct) + "...", titleinset, 85-(int)(fm.getHeight()/2));
+//			r2 = fm.getStringBounds(filename.substring(ct),g2);
+//			if (r2.getWidth() < maxsize) {
+//				lines[1] = filename.substring(ct);
+//				ctlines++;
+//			} else {
+//				ct2 = ct+5;
+//				do {
+//					ct2++;				
+//					r2 = fm.getStringBounds(filename.substring(ct,ct2),g2);
+//				} while (r2.getWidth() < maxsize);
+//				ct2--;
+//				lines[2] = filename.substring(ct,ct2); 				
+//			}
+//			
+//			
+//			ct--;
+//			do {
+//				ct++;
+//				r2 = fm.getStringBounds("..." + filename.substring(ct),g2);
+//			} while (r2.getWidth() > maxsize);			
+//			g2.drawString("..." + filename.substring(ct), 130-titleinset-(int)(r2.getWidth()),85+(int)(fm.getHeight()/2));
+			
 		}
 		
     }
